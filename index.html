@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IE Ramón Castilla – Luya | Sistema de Registro de Incidencias</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ================= PANTALLA DE LOGIN ================= -->
+  <div id="loginScreen" class="login-wrapper">
+    <div class="login-card">
+      <div class="school-badge"><img src="img/logo1.png" alt=""></div>
+      <h1>IE RAMÓN CASTILLA – LUYA</h1>
+      <p class="subtitle">Sistema de Registro de Alumnos e Incidencias</p>
+
+      <div class="role-tabs">
+        <button type="button" class="role-tab active" id="tabRoleDocente" onclick="selectLoginRole('docente')">Docente</button>
+        <button type="button" class="role-tab" id="tabRoleAdmin" onclick="selectLoginRole('admin')">Administrador</button>
+      </div>
+
+      <div id="loginError" class="error-msg">Usuario o contraseña incorrectos para el rol seleccionado.</div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginUser">Usuario</label>
+          <input type="text" id="loginUser" class="form-control" placeholder="Ingrese su usuario" required />
+        </div>
+        <div class="form-group">
+          <label for="loginPass">Contraseña</label>
+          <input type="password" id="loginPass" class="form-control" placeholder="Ingrese su contraseña" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Ingresar al Sistema</button>
+      </form>
+
+      <div class="demo-credentials">
+        <strong>Credenciales de acceso rápido:</strong>
+        • <b>Docente:</b> usuario <code>docente</code> | clave <code>docente123</code><br/>
+        • <b>Administrador:</b> usuario <code>admin</code> | clave <code>admin123</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= APLICACIÓN PRINCIPAL ================= -->
+  <div id="appContainer" class="app-container">
+    <header class="topbar">
+      <div class="brand">
+        <div><img src="img/logo1.png" alt=""></div>
+        <div class="brand-text">
+          <h2>IE RAMÓN CASTILLA – LUYA</h2>
+          <span>Control de Convivencia Escolar e Incidencias Disciplinarias</span>
+        </div>
+      </div>
+      <div class="user-info">
+        <span id="userDisplay" class="role-pill">Rol</span>
+        <button type="button" class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+      </div>
+    </header>
+
+    <nav class="nav-bar">
+      <button class="nav-btn active" data-tab="resumen" onclick="switchTab('resumen', this)">📊 Resumen y Alertas</button>
+      <button class="nav-btn" data-tab="incidencias" onclick="switchTab('incidencias', this)">📝 Registro de Incidencias</button>
+      <button class="nav-btn" data-tab="alumnos" onclick="switchTab('alumnos', this)">🎓 Registro de Alumnos</button>
+      <button class="nav-btn" data-tab="guia" onclick="switchTab('guia', this)">ℹ️ Reglas del Sistema</button>
+    </nav>
+
+    <main class="main-content">
+      <!-- REGLA PRINCIPAL -->
+      <div class="rule-banner">
+        <div>
+          <strong>Regla principal de convivencia:</strong> 0–2 incidencias = <span class="badge badge-normal">NORMAL</span> &nbsp;|&nbsp; 3 o más incidencias = <span class="badge badge-advertencia">ADVERTENCIA (ROJO)</span>
+        </div>
+        <div>
+          <button class="btn btn-outline btn-sm" onclick="exportarCSV()">⬇️ Exportar Reporte CSV</button>
+        </div>
+      </div>
+
+      <!-- ================= PESTAÑA 1: RESUMEN ================= -->
+      <section id="tab-resumen" class="tab-section active">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-title">Alumnos Registrados</div>
+            <div class="kpi-value" id="kpiTotalAlumnos">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Total Incidencias</div>
+            <div class="kpi-value" id="kpiTotalIncidencias">0</div>
+          </div>
+          <div class="kpi-card warn">
+            <div class="kpi-title">Con 1 o 2 Incidencias</div>
+            <div class="kpi-value" id="kpiRiesgo">0</div>
+          </div>
+          <div class="kpi-card danger">
+            <div class="kpi-title">En Advertencia (3+)</div>
+            <div class="kpi-value" id="kpiAdvertencia">0</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Resumen de Convivencia por Grado (1ro a 5to)</h3>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>GRADO</th>
+                  <th>ALUMNOS REGISTRADOS</th>
+                  <th>ALUMNOS CON 1 INCIDENCIA</th>
+                  <th>ALUMNOS CON 2 INCIDENCIAS</th>
+                  <th>ALUMNOS EN ADVERTENCIA (3+)</th>
+                </tr>
+              </thead>
+              <tbody id="tablaResumenGrados"></tbody>
+              <tfoot id="footResumenGrados"></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Distribución de Incidencias por Grado</h3>
+          </div>
+          <div id="graficoGrados" class="chart-bars"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 class="text-danger">🚨 Alumnos con Advertencia (3 o más incidencias)</h3>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID ALUMNO</th>
+                  <th>APELLIDOS Y NOMBRES</th>
+                  <th>GRADO</th>
+                  <th>SECCIÓN</th>
+                  <th>N° INCIDENCIAS</th>
+                  <th>ESTADO</th>
+                </tr>
+              </thead>
+              <tbody id="tablaAdvertencias"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PESTAÑA 2: INCIDENCIAS ================= -->
+      <section id="tab-incidencias" class="tab-section">
+        <div class="card">
+          <div class="card-header">
+            <h3>Registrar Nueva Incidencia</h3>
+          </div>
+          <form id="formIncidencia">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="incFecha">Fecha *</label>
+                <input type="date" id="incFecha" class="form-control" required />
+              </div>
+              <div class="form-group">
+                <label for="incAlumnoSelect">Seleccionar Alumno (ID o Nombre) *</label>
+                <select id="incAlumnoSelect" class="form-control" required onchange="autocompletarAlumno()">
+                  <option value="">-- Seleccione un estudiante --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="incNombre">Apellidos y Nombres</label>
+                <input type="text" id="incNombre" class="form-control" readonly placeholder="Automático" />
+              </div>
+              <div class="form-group">
+                <label for="incGradoSeccion">Grado y Sección</label>
+                <input type="text" id="incGradoSeccion" class="form-control" readonly placeholder="Automático" />
+              </div>
+              <div class="form-group">
+                <label for="incTipo">Tipo de Incidencia *</label>
+                <select id="incTipo" class="form-control" required></select>
+              </div>
+              <div class="form-group">
+                <label for="incAccion">Acción Tomada *</label>
+                <select id="incAccion" class="form-control" required></select>
+              </div>
+              <div class="form-group">
+                <label for="incDocente">Docente / Responsable *</label>
+                <input type="text" id="incDocente" class="form-control" placeholder="Nombre del docente" required />
+              </div>
+              <div class="form-group">
+                <label for="incObs">Observaciones</label>
+                <input type="text" id="incObs" class="form-control" placeholder="Opcional" />
+              </div>
+              <div class="form-group full-width">
+                <label for="incDescripcion">Descripción de los hechos</label>
+                <input type="text" id="incDescripcion" class="form-control" placeholder="Detalle breve de la incidencia ocurrida" />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">+ Guardar Incidencia</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Historial de Incidencias Registradas</h3>
+          </div>
+          <div class="filter-bar">
+            <input type="text" id="filtroIncidencias" class="form-control" placeholder="Buscar por alumno, ID o tipo..." oninput="renderIncidencias()" />
+            <select id="filtroIncGrado" class="form-control" onchange="renderIncidencias()">
+              <option value="">Todos los grados</option>
+            </select>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>FECHA</th>
+                  <th>ID ALUMNO</th>
+                  <th>APELLIDOS Y NOMBRES</th>
+                  <th>GRADO</th>
+                  <th>SEC.</th>
+                  <th>TIPO DE INCIDENCIA</th>
+                  <th>DESCRIPCIÓN</th>
+                  <th>ACCIÓN TOMADA</th>
+                  <th>DOCENTE / RESP.</th>
+                  <th class="admin-only-col">ACCIÓN</th>
+                </tr>
+              </thead>
+              <tbody id="tablaIncidencias"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PESTAÑA 3: ALUMNOS ================= -->
+      <section id="tab-alumnos" class="tab-section">
+        <div class="card" id="cardFormAlumno">
+          <div class="card-header">
+            <h3 id="tituloFormAlumno">Registrar / Actualizar Alumno</h3>
+          </div>
+          <form id="formAlumno">
+            <input type="hidden" id="editAlumnoOriginalId" value="" />
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="aluId">ID Alumno / DNI *</label>
+                <input type="text" id="aluId" class="form-control" placeholder="Ej. 71781050" required />
+              </div>
+              <div class="form-group">
+                <label for="aluNombres">Apellidos y Nombres *</label>
+                <input type="text" id="aluNombres" class="form-control" placeholder="APELLIDOS Y NOMBRES" required />
+              </div>
+              <div class="form-group">
+                <label for="aluGrado">Grado *</label>
+                <select id="aluGrado" class="form-control" required></select>
+              </div>
+              <div class="form-group">
+                <label for="aluSeccion">Sección *</label>
+                <select id="aluSeccion" class="form-control" required></select>
+              </div>
+              <div class="form-group">
+                <label for="aluTutor">Tutor / Docente</label>
+                <input type="text" id="aluTutor" class="form-control" placeholder="Nombre del tutor" />
+              </div>
+              <div class="form-group">
+                <label for="aluObs">Observaciones</label>
+                <input type="text" id="aluObs" class="form-control" placeholder="Observaciones del estudiante" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="btnGuardarAlumno">Guardar Alumno</button>
+              <button type="button" class="btn btn-outline hidden" id="btnCancelarEdicion" onclick="cancelarEdicionAlumno()">Cancelar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Padrón de Alumnos y Estado Disciplinario</h3>
+          </div>
+          <div class="filter-bar">
+            <input type="text" id="filtroAlumnos" class="form-control" placeholder="Buscar por ID o apellidos..." oninput="renderAlumnos()" />
+            <select id="filtroAluGrado" class="form-control" onchange="renderAlumnos()">
+              <option value="">Todos los grados</option>
+            </select>
+            <select id="filtroAluEstado" class="form-control" onchange="renderAlumnos()">
+              <option value="">Todos los estados</option>
+              <option value="NORMAL">NORMAL (0-2)</option>
+              <option value="ADVERTENCIA">ADVERTENCIA (3+)</option>
+            </select>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID ALUMNO</th>
+                  <th>APELLIDOS Y NOMBRES</th>
+                  <th>GRADO</th>
+                  <th>SECCIÓN</th>
+                  <th>TUTOR / DOCENTE</th>
+                  <th>N° INCIDENCIAS</th>
+                  <th>ESTADO</th>
+                  <th>ÚLTIMA INCIDENCIA</th>
+                  <th>OBSERVACIONES</th>
+                  <th class="admin-only-col">ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody id="tablaAlumnos"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PESTAÑA 4: GUÍA ================= -->
+      <section id="tab-guia" class="tab-section">
+        <div class="card">
+          <div class="card-header">
+            <h3>Funcionamiento del Sistema (IE Ramón Castilla – Luya)</h3>
+          </div>
+          <ol class="guide-list">
+            <li><b>Gestión de Alumnos (1ro a 5to grado):</b> El administrador registra y mantiene actualizado el padrón de estudiantes con su ID/DNI, grado, sección y tutor.</li>
+            <li><b>Registro de Incidencias:</b> Tanto docentes como administradores pueden registrar incidencias seleccionando al alumno; sus datos (nombre, grado y sección) se completan automáticamente.</li>
+            <li><b>Cálculo Automático:</b> El sistema contabiliza en tiempo real cuántas incidencias acumula cada estudiante y cuál fue la fecha de su última falta.</li>
+            <li><b>Alerta Roja Automática:</b> Cuando un estudiante alcanza <b>3 o más incidencias</b>, su estado cambia automáticamente de <b>NORMAL</b> a <b>ADVERTENCIA</b>, marcándose en rojo en todas las tablas y apareciendo en el panel de alertas críticas.</li>
+            <li><b>Permisos por Rol:</b> El <b>Docente</b> registra incidencias y consulta reportes; el <b>Administrador</b> además puede crear, editar o eliminar alumnos y depurar registros.</li>
+          </ol>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
